@@ -61,6 +61,11 @@ Les données sont disponibles dans le dossier `scripts/all-heroes.csv` et provie
 * [SuperheroDB](https://www.superherodb.com/)
 
 
+## Liens utiles
+* Suggestion avec Elasticsearch : https://www.elastic.co/guide/en/elasticsearch/reference/7.5/search-suggesters.html#completion-suggester
+* Aggrégations avec MongoDB : https://docs.mongodb.com/manual/meta/aggregation-quick-reference/
+
+
 ## Pour rendre le travail
 
 Une fois l'ensemble du code complété et que l'appli est fonctionnelle, faites une Pull Request !
