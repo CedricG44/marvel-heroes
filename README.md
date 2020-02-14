@@ -51,6 +51,7 @@ Languages et tooling :
 
 Environnement de développement conseillé :
 * Intellij Idea (pour la partie Play/Java)
+  * + plugin SBT : https://plugins.jetbrains.com/plugin/5007-sbt
 * VSCode (pour la partie Node)
 
 
