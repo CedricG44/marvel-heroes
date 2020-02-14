@@ -1,9 +1,0 @@
-2020-02-14 17:05:21,517 [INFO] from play.api.http.EnabledFilters in play-dev-mode-akka.actor.default-dispatcher-4 - Enabled Filters (see <https://www.playframework.com/documentation/latest/Filters>):
-
-    play.filters.csrf.CSRFFilter
-    play.filters.headers.SecurityHeadersFilter
-    play.filters.hosts.AllowedHostsFilter
-
-2020-02-14 17:05:21,526 [INFO] from play.api.Play in play-dev-mode-akka.actor.default-dispatcher-4 - Application started (Dev) (no global state)
-2020-02-14 17:05:21,954 [INFO] from RedisRepository in application-akka.actor.default-dispatcher-3 - Retrieved tops heroes
-2020-02-14 17:05:21,956 [INFO] from RedisRepository in application-akka.actor.default-dispatcher-3 - Retrieved last heroes
