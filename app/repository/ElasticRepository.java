@@ -39,7 +39,13 @@ public class ElasticRepository {
                          "  \"size\": " + size + ",\n" +
                          "  \"query\": {\n" +
                          "    \"query_string\": {\n" +
-                         "      \"default_field\": \"name.keyword\",\n" +
+                         "      \"fields\": [\n" +
+                         "        \"name.keyword^4\",\n" +
+                         "        \"aliases.keyword^3\",\n" +
+                         "        \"secretIdentities.keyword^3\",\n" +
+                         "        \"description.keyword^2\",\n" +
+                         "        \"partners.keyword\"\n" +
+                         "      ],\n" +
                          "      \"query\": \"*" + input.replaceAll(" ", "*") + "*\"\n" +
                          "    }\n" +
                          "  }\n" +
