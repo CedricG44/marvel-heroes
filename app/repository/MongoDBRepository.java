@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.mongodb.client.model.Accumulators;
 import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Sorts;
+
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import models.Hero;
@@ -43,8 +44,10 @@ public class MongoDBRepository {
     }
 
     public CompletionStage<List<YearAndUniverseStat>> countByYearAndUniverse() {
-        List<Document> pipeline = new ArrayList<>();
-        return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(pipeline))
+        return CompletableFuture.completedFuture(new ArrayList<>());
+        /*List<Document> pipeline = new ArrayList<>();
+        return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(Arrays.asList(
+        )))
                 .thenApply(documents -> documents.stream()
                         .map(Document::toJson)
                         .map(Json::parse)
@@ -59,13 +62,14 @@ public class MongoDBRepository {
                             return new YearAndUniverseStat(year, byUniverse);
 
                         })
-                        .collect(Collectors.toList()));
+                        .collect(Collectors.toList()));*/
     }
 
 
     public CompletionStage<List<ItemCount>> topPowers(int top) {
         return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(Arrays.asList(
-                Aggregates.sort(Sorts.ascending("power")),
+                Aggregates.unwind("$powers"),
+                Aggregates.group("$powers", Accumulators.sum("count", 1)),
                 Aggregates.limit(top)
         ))).thenApply(documents -> documents.stream()
                                             .map(Document::toJson)
@@ -76,7 +80,7 @@ public class MongoDBRepository {
 
     public CompletionStage<List<ItemCount>> byUniverse() {
         return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(Arrays.asList(
-                Aggregates.group("identity.universe")
+                Aggregates.group("$identity.universe", Accumulators.sum("count", 1))
         ))).thenApply(documents -> documents.stream()
                                             .map(Document::toJson)
                                             .map(Json::parse)
