@@ -6,6 +6,7 @@ import env.ElasticConfiguration;
 import env.MarvelHeroesConfiguration;
 import models.PaginatedResults;
 import models.SearchedHero;
+import play.Logger;
 import play.libs.Json;
 import play.libs.ws.WSClient;
 
@@ -18,6 +19,8 @@ import java.util.concurrent.CompletionStage;
 @Singleton
 public class ElasticRepository {
 
+    private static Logger.ALogger logger = Logger.of("ElasticRepository");
+
     private final WSClient wsClient;
     private final ElasticConfiguration elasticConfiguration;
 
@@ -27,8 +30,8 @@ public class ElasticRepository {
         this.elasticConfiguration = configuration.elasticConfiguration;
     }
 
-
     public CompletionStage<PaginatedResults<SearchedHero>> searchHeroes(String input, int size, int page) {
+        logger.info("Search heroes");
         return wsClient.url(elasticConfiguration.uri + "/heroes/_search")
                 .post(Json.parse(
                                 "{\n" +
@@ -56,10 +59,11 @@ public class ElasticRepository {
     }
 
     public CompletionStage<List<SearchedHero>> suggest(String input) {
+        logger.info("Suggest heroes");
         return wsClient.url(elasticConfiguration.uri + "/heroes/_search")
                 .post(Json.parse(
                                 "{\n" +
-                                "  \"size\": 5,\n" +
+                                "  \"size\": 7,\n" +
                                 "  \"query\": {\n" +
                                 "    \"query_string\": {\n" +
                                 "      \"fields\": [\n" +
