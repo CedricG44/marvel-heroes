@@ -106,7 +106,6 @@ public class MongoDBRepository {
                         .map(Document::toJson)
                         .map(Json::parse)
                         .map(jsonNode -> {
-                            System.out.println(jsonNode);
                             int year = jsonNode.findPath("_id").findPath("yearAppearance").asInt();
                             ArrayNode byUniverseNode = (ArrayNode) jsonNode.findPath("byUniverse");
                             Iterator<JsonNode> elements = byUniverseNode.elements();
