@@ -17,7 +17,20 @@ async function run() {
   const heroes = [];
   fs.createReadStream("all-heroes.csv")
     .pipe(csv())
-    .on("data", data => heroes.push(data))
+    .on("data", data => {
+      const hero = {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        imageUrl: data.imageUrl,
+        universe: data.universe,
+        gender: data.gender,
+        aliases: data.aliases,
+        secretIdentities: data.secretIdentities,
+        partners: data.partners
+      };
+      heroes.push(hero);
+    })
     .on("end", () => {
       client.bulk(createBulkInsertQuery(heroes), (err, resp) => {
         if (err) console.trace(err.message);
@@ -30,11 +43,30 @@ async function run() {
 // Fonction utilitaire permettant de formatter les données pour l'insertion "bulk" dans Elasticsearch
 function createBulkInsertQuery(heroes) {
   const body = heroes.reduce((acc, hero) => {
+    const {
+      id,
+      name,
+      description,
+      imageUrl,
+      universe,
+      gender,
+      aliases,
+      secretIdentities,
+      partners
+    } = hero;
     acc.push({
-      index: { _index: heroesIndexName, _type: "_doc", _id: hero.id }
+      index: { _index: heroesIndexName, _type: "_doc", _id: id }
     });
-    delete hero.id;
-    acc.push(hero);
+    acc.push({
+      name,
+      description,
+      imageUrl,
+      universe,
+      gender,
+      aliases,
+      secretIdentities,
+      partners
+    });
     return acc;
   }, []);
 
