@@ -1,6 +1,7 @@
 package models;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import play.libs.Json;
@@ -9,9 +10,11 @@ import java.util.List;
 import java.util.Optional;
 
 public class HeroIdentity {
+    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     public final List<String> secretIdentities;
     public final Optional<String> birthPlace;
     public final Optional<String> occupation;
+    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     public final List<String> aliases;
     public final Optional<String> alignment;
     public final Optional<String> firstAppearance;
