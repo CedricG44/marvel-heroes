@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
 
 @Singleton
 public class RedisRepository {
@@ -28,17 +29,19 @@ public class RedisRepository {
 
 
     public CompletionStage<Boolean> addNewHeroVisited(StatItem statItem) {
-        logger.info("hero visited " + statItem.name);
-        return addHeroAsLastVisited(statItem).thenCombine(incrHeroInTops(statItem), (aLong, aBoolean) -> {
-            return aBoolean && aLong > 0;
-        });
+        logger.info("Hero visited " + statItem.name);
+        return addHeroAsLastVisited(statItem)
+                .thenCombine(incrHeroInTops(statItem), (aLong, aBoolean) -> aBoolean && aLong > 0);
     }
 
     private CompletionStage<Boolean> incrHeroInTops(StatItem statItem) {
-        // TODO
-        return CompletableFuture.completedFuture(true);
+        logger.info("Incr hero in top");
+        return redisClient
+                .connect()
+                .async()
+                .zincrby("top-heroes", 1, statItem.toJson().toString())
+                .thenApply(d -> !d.isNaN());
     }
-
 
     private CompletionStage<Long> addHeroAsLastVisited(StatItem statItem) {
         // TODO
@@ -53,9 +56,14 @@ public class RedisRepository {
     }
 
     public CompletionStage<List<TopStatItem>> topHeroesVisited(int count) {
-        logger.info("Retrieved tops heroes");
-        // TODO
-        List<TopStatItem> tops = Arrays.asList(new TopStatItem(StatItemSamples.MsMarvel(), 8L), new TopStatItem(StatItemSamples.Starlord(), 6L), new TopStatItem(StatItemSamples.SpiderMan(), 5L), new TopStatItem(StatItemSamples.BlackPanther(), 5L), new TopStatItem(StatItemSamples.Thanos(), 4L));
-        return CompletableFuture.completedFuture(tops);
+        logger.info("Retrieved top heroes");
+        return redisClient
+                .connect()
+                .async()
+                .zrevrangeWithScores("top-heroes", 0, count)
+                .thenApply(hs -> hs
+                        .stream()
+                        .map(h -> new TopStatItem(StatItem.fromJson(h.getValue()), (long) h.getScore()))
+                        .collect(Collectors.toList()));
     }
 }
