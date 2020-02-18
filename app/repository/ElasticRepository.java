@@ -56,7 +56,7 @@ public class ElasticRepository {
     }
 
     public CompletionStage<List<SearchedHero>> suggest(String input) {
-        return wsClient.url(elasticConfiguration.uri + "...")
+        return wsClient.url(elasticConfiguration.uri + "/heroes/_search")
                 .post(Json.parse(
                                 "{\n" +
                                 "  \"size\": 5,\n" +
