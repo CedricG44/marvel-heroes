@@ -40,11 +40,11 @@ public class ElasticRepository {
                                 "  \"query\": {\n" +
                                 "    \"query_string\": {\n" +
                                 "      \"fields\": [\n" +
-                                "        \"name.keyword^4\",\n" +
-                                "        \"aliases.keyword^3\",\n" +
-                                "        \"secretIdentities.keyword^3\",\n" +
-                                "        \"description.keyword^2\",\n" +
-                                "        \"partners.keyword\"\n" +
+                                "        \"name^4\",\n" +
+                                "        \"aliases^3\",\n" +
+                                "        \"secretIdentities^3\",\n" +
+                                "        \"description^2\",\n" +
+                                "        \"partners\"\n" +
                                 "      ],\n" +
                                 "      \"query\": \"*" + input.replaceAll(" ", "*") + "*\"\n" +
                                 "    }\n" +
@@ -52,7 +52,7 @@ public class ElasticRepository {
                                 "}"))
                 .thenApply(response -> {
                     final JsonNode hits = response.asJson().get("hits");
-                    final List<SearchedHero> heroes = mapHeroesFromJson(response.asJson().get("hits"));
+                    final List<SearchedHero> heroes = mapHeroesFromJson(response.asJson().get("hits"), "hits");
                     final int total = hits.get("total").get("value").asInt();
                     return new PaginatedResults<>(total, page, (int) Math.ceil((double) total / (double) size), heroes);
                 });
@@ -63,31 +63,32 @@ public class ElasticRepository {
         return wsClient.url(elasticConfiguration.uri + "/heroes/_search")
                 .post(Json.parse(
                                 "{\n" +
-                                "  \"size\": 7,\n" +
-                                "  \"query\": {\n" +
-                                "    \"query_string\": {\n" +
-                                "      \"fields\": [\n" +
-                                "        \"name.keyword^4\",\n" +
-                                "        \"aliases.keyword^3\",\n" +
-                                "        \"secretIdentities.keyword^3\",\n" +
-                                "        \"description.keyword^2\",\n" +
-                                "        \"partners.keyword\"\n" +
-                                "      ],\n" +
-                                "      \"query\": \"*" + input.replaceAll(" ", "*") + "*\"\n" +
+                                "  \"suggest\": {\n" +
+                                "    \"suggestion\": {\n" +
+                                "      \"prefix\": \"" + input + "\",\n" +
+                                "      \"completion\": {\n" +
+                                "        \"field\": \"suggest\"\n" +
+                                "      }\n" +
                                 "    }\n" +
                                 "  }\n" +
                                 "}"))
-                .thenApply(response -> mapHeroesFromJson(response.asJson().get("hits")));
+                .thenApply(response -> {
+                    final List<List<SearchedHero>> heroes = new ArrayList<>();
+                    response.asJson().get("suggest").get("suggestion").elements().forEachRemaining(s -> {
+                        heroes.add(mapHeroesFromJson(s, "options"));
+                    });
+                    return heroes.get(0);
+                });
     }
 
-    private List<SearchedHero> mapHeroesFromJson(final JsonNode hits) {
+    private List<SearchedHero> mapHeroesFromJson(final JsonNode node, final String nodeKey) {
         final List<SearchedHero> heroes = new ArrayList<>();
 
         // Création des héros
-        hits.get("hits").elements().forEachRemaining(e -> {
-            final JsonNode node = e.get("_source");
-            ((ObjectNode) node).put("id", e.get("_id").textValue());
-            heroes.add(SearchedHero.fromJson(node));
+        node.get(nodeKey).elements().forEachRemaining(e -> {
+            final JsonNode n = e.get("_source");
+            ((ObjectNode) n).put("id", e.get("_id").textValue());
+            heroes.add(SearchedHero.fromJson(n));
         });
         return heroes;
     }

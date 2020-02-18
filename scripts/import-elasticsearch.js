@@ -7,9 +7,17 @@ const heroesIndexName = "heroes";
 
 async function run() {
   // Création de l'indice
-  client.indices.create({ index: heroesIndexName }, (err, resp) => {
-    if (err) {
-      console.trace(err.message);
+  await client.indices.create({ index: heroesIndexName });
+
+  // Ajout du mapping pour la suggestion
+  await client.indices.putMapping({
+    index: heroesIndexName,
+    body: {
+      properties: {
+        suggest: {
+          type: "completion"
+        }
+      }
     }
   });
 
@@ -27,7 +35,29 @@ async function run() {
         gender: data.gender,
         aliases: data.aliases,
         secretIdentities: data.secretIdentities,
-        partners: data.partners
+        partners: data.partners,
+        suggest: [
+          {
+            input: data.name,
+            weight: 8
+          },
+          {
+            input: data.aliases,
+            weight: 4
+          },
+          {
+            input: data.secretIdentities,
+            weight: 4
+          },
+          {
+            input: data.description,
+            weight: 2
+          },
+          {
+            input: data.partners,
+            weight: 1
+          }
+        ]
       };
       heroes.push(hero);
     })
@@ -52,7 +82,8 @@ function createBulkInsertQuery(heroes) {
       gender,
       aliases,
       secretIdentities,
-      partners
+      partners,
+      suggest
     } = hero;
     acc.push({
       index: { _index: heroesIndexName, _type: "_doc", _id: id }
@@ -65,7 +96,8 @@ function createBulkInsertQuery(heroes) {
       gender,
       aliases,
       secretIdentities,
-      partners
+      partners,
+      suggest
     });
     return acc;
   }, []);
