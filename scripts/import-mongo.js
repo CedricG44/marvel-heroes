@@ -13,7 +13,6 @@ const insertHereos = (db, callback) => {
   fs.createReadStream("all-heroes.csv")
     .pipe(csv())
     .on("data", data => {
-      const powers = data.powers.split(',');
       const hero = {
         id : data.id,
         name : data.name,
@@ -22,7 +21,7 @@ const insertHereos = (db, callback) => {
         externalLink : data.externalLink,
         description : data.description,
         teams : data.teams,
-        powers : powers,
+        powers : data.powers.length ? data.powers.split(',') : [],
         partners : data.partners,
         creators : data.creators,
         appearance : {
@@ -45,12 +44,12 @@ const insertHereos = (db, callback) => {
           universe : data.universe
         },
         skills : {
-          intelligence : data.intelligence,
-          strength : data.strength,
-          speed : data.speed,
-          durability : data.durability,
-          combat : data.combat,
-          power : data.power
+          intelligence : data.intelligence|0,
+          strength : data.strength|0,
+          speed : data.speed|0,
+          durability : data.durability|0,
+          combat : data.combat|0,
+          power : data.power|0
         }
       };
       heroes.push(hero)

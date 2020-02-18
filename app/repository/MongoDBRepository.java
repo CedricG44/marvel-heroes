@@ -1,29 +1,28 @@
 package repository;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.mongodb.client.model.Accumulators;
 import com.mongodb.client.model.Aggregates;
-import com.mongodb.client.model.Sorts;
-
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import models.Hero;
 import models.ItemCount;
 import models.YearAndUniverseStat;
-import org.bson.BsonDocument;
 import org.bson.Document;
 import play.libs.Json;
-import utils.HeroSamples;
 import utils.ReactiveStreamsUtils;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
+
+import static com.mongodb.client.model.Sorts.descending;
+import static com.mongodb.client.model.Sorts.orderBy;
 
 @Singleton
 public class MongoDBRepository {
@@ -47,6 +46,8 @@ public class MongoDBRepository {
         return CompletableFuture.completedFuture(new ArrayList<>());
         /*List<Document> pipeline = new ArrayList<>();
         return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(Arrays.asList(
+                Aggregates.group("$")
+                Aggregates.group("byUniverse", Accumulators.sum("count",1))
         )))
                 .thenApply(documents -> documents.stream()
                         .map(Document::toJson)
@@ -70,21 +71,22 @@ public class MongoDBRepository {
         return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(Arrays.asList(
                 Aggregates.unwind("$powers"),
                 Aggregates.group("$powers", Accumulators.sum("count", 1)),
+                Aggregates.sort(orderBy(descending("count"))),
                 Aggregates.limit(top)
         ))).thenApply(documents -> documents.stream()
-                                            .map(Document::toJson)
-                                            .map(Json::parse)
-                                            .map(jsonNode -> new ItemCount(jsonNode.findPath("_id").asText(), jsonNode.findPath("count").asInt()))
-                                            .collect(Collectors.toList()));
+                .map(Document::toJson)
+                .map(Json::parse)
+                .map(jsonNode -> new ItemCount(jsonNode.findPath("_id").asText(), jsonNode.findPath("count").asInt()))
+                .collect(Collectors.toList()));
     }
 
     public CompletionStage<List<ItemCount>> byUniverse() {
         return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(Arrays.asList(
                 Aggregates.group("$identity.universe", Accumulators.sum("count", 1))
         ))).thenApply(documents -> documents.stream()
-                                            .map(Document::toJson)
-                                            .map(Json::parse)
-                                            .map(jsonNode -> new ItemCount(jsonNode.findPath("_id").asText(), jsonNode.findPath("count").asInt()))
-                                            .collect(Collectors.toList()));
+                .map(Document::toJson)
+                .map(Json::parse)
+                .map(jsonNode -> new ItemCount(jsonNode.findPath("_id").asText(), jsonNode.findPath("count").asInt()))
+                .collect(Collectors.toList()));
     }
 }
