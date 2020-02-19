@@ -12,14 +12,17 @@ import play.libs.ws.WSClient;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Singleton
 public class ElasticRepository {
 
-    private static Logger.ALogger logger = Logger.of("ElasticRepository");
+    private static final Logger.ALogger LOGGER = Logger.of("ElasticRepository");
+    private static final String HEROES_SEARCH_PATH = "/heroes/_search";
 
     private final WSClient wsClient;
     private final ElasticConfiguration elasticConfiguration;
@@ -31,8 +34,8 @@ public class ElasticRepository {
     }
 
     public CompletionStage<PaginatedResults<SearchedHero>> searchHeroes(String input, int size, int page) {
-        logger.info("Search heroes");
-        return wsClient.url(elasticConfiguration.uri + "/heroes/_search")
+        LOGGER.info("Search heroes");
+        return wsClient.url(elasticConfiguration.uri + HEROES_SEARCH_PATH)
                 .post(Json.parse(
                                 "{\n" +
                                 "  \"from\": " + size * (page - 1) + ",\n" +
@@ -54,13 +57,14 @@ public class ElasticRepository {
                     final JsonNode hits = response.asJson().get("hits");
                     final List<SearchedHero> heroes = mapHeroesFromJson(response.asJson().get("hits"), "hits");
                     final int total = hits.get("total").get("value").asInt();
-                    return new PaginatedResults<>(total, page, (int) Math.ceil((double) total / (double) size), heroes);
-                });
+                    return new PaginatedResults<>(total, page, Math.max(1, (int) Math.ceil((double) total / (double) size)), heroes);
+                })
+                .exceptionally(e -> new PaginatedResults<>(1, 1, 1, handleErrors(e)));
     }
 
     public CompletionStage<List<SearchedHero>> suggest(String input) {
-        logger.info("Suggest heroes");
-        return wsClient.url(elasticConfiguration.uri + "/heroes/_search")
+        LOGGER.info("Suggest heroes");
+        return wsClient.url(elasticConfiguration.uri + HEROES_SEARCH_PATH)
                 .post(Json.parse(
                                 "{\n" +
                                 "  \"suggest\": {\n" +
@@ -73,23 +77,28 @@ public class ElasticRepository {
                                 "  }\n" +
                                 "}"))
                 .thenApply(response -> {
-                    final List<List<SearchedHero>> heroes = new ArrayList<>();
-                    response.asJson().get("suggest").get("suggestion").elements().forEachRemaining(s -> {
-                        heroes.add(mapHeroesFromJson(s, "options"));
-                    });
-                    return heroes.get(0);
-                });
+                    final Iterable<JsonNode> iterable = () -> response.asJson().get("suggest").get("suggestion").elements();
+                    return StreamSupport.stream(iterable.spliterator(), false)
+                            .map(n -> mapHeroesFromJson(n, "options"))
+                            .collect(Collectors.toList())
+                            .get(0);
+                })
+                .exceptionally(this::handleErrors);
     }
 
     private List<SearchedHero> mapHeroesFromJson(final JsonNode node, final String nodeKey) {
-        final List<SearchedHero> heroes = new ArrayList<>();
+        final Iterable<JsonNode> iterable = () -> node.get(nodeKey).elements();
+        return StreamSupport.stream(iterable.spliterator(), false)
+                .map(e -> {
+                    final JsonNode n = e.get("_source");
+                    ((ObjectNode) n).put("id", e.get("_id").textValue());
+                    return SearchedHero.fromJson(n);
+                })
+                .collect(Collectors.toList());
+    }
 
-        // Création des héros
-        node.get(nodeKey).elements().forEachRemaining(e -> {
-            final JsonNode n = e.get("_source");
-            ((ObjectNode) n).put("id", e.get("_id").textValue());
-            heroes.add(SearchedHero.fromJson(n));
-        });
-        return heroes;
+    private List<SearchedHero> handleErrors(final Throwable e) {
+        LOGGER.error("Error while contacting Elasticsearch: " + e.getMessage(), e);
+        return Collections.singletonList(new SearchedHero("-1", "", "No result", "", ""));
     }
 }
