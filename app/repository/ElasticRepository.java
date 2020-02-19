@@ -49,7 +49,7 @@ public class ElasticRepository {
                                 "        \"description^2\",\n" +
                                 "        \"partners\"\n" +
                                 "      ],\n" +
-                                "      \"query\": \"*" + input.replaceAll(" ", "*") + "*\"\n" +
+                                "      \"query\": \"" + (input.isEmpty() ? input + "*" : input + "~") + "\"\n" +
                                 "    }\n" +
                                 "  }\n" +
                                 "}"))
