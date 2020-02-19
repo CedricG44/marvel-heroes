@@ -3,6 +3,8 @@ package repository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.mongodb.client.model.Accumulators;
 import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Sorts;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import models.Hero;
@@ -48,49 +50,23 @@ public class MongoDBRepository {
 
     public CompletionStage<List<YearAndUniverseStat>> countByYearAndUniverse() {
         LOGGER.info("Retrieved count by year and universe");
-        final String dateFilter = "{\n" +
-                "            $match: {\n" +
-                "                \"identity.yearAppearance\": {\n" +
-                "                    \"$ne\": \"\"\n" +
-                "                }\n" +
-                "            }\n" +
-                "        }";
-
-        final String groupByYear = "{\n" +
-                "            $group: {\n" +
-                "                _id:  {\n" +
-                "                    yearAppearance: \"$identity.yearAppearance\",\n" +
-                "                    universe: \"$identity.universe\",\n" +
-                "                },\n" +
-                "                count: { $sum : 1 }\n" +
-                "            }\n" +
-                "        }";
-
-        final String groupByUniverse = "{\n" +
-                "            $group: { \n" +
-                "                _id:  \"$_id\",\n" +
-                "                byUniverse: {\n" +
-                "                    $push: {\n" +
-                "                        universe:\"$_id.universe\",\n" +
-                "                        count:\"$count\"\n" +
-                "                    }\n" +
-                "                }\n" +
-                "            }\n" +
-                "        }";
-
-        final String sort = "{\n" +
-                "            $sort : {\n" +
-                "                \"_id.yearAppearance\" : 1\n" +
-                "            }\n" +
-                "        }";
-
-        final List<Document> pipeline = new ArrayList<>();
-        pipeline.add(Document.parse(dateFilter));
-        pipeline.add(Document.parse(groupByYear));
-        pipeline.add(Document.parse(groupByUniverse));
-        pipeline.add(Document.parse(sort));
-
-        return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(pipeline))
+        Map id = new HashMap<String, String>() {{
+            put("yearAppearance", "$identity.yearAppearance");
+            put("universe", "$identity.universe");
+        }};
+        Map yearAppearance = new HashMap<String, String>() {{
+            put("yearAppearance", "$_id.yearAppearance");
+        }};
+        Map push = new HashMap<String, String>() {{
+            put("universe", "$_id.universe");
+            put("count", "$count");
+        }};
+        return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(Arrays.asList(
+                Aggregates.match(Filters.ne("identity.yearAppearance", "")),
+                Aggregates.group(id, Accumulators.sum("count", 1)),
+                Aggregates.group(yearAppearance, Accumulators.push("byUniverse", push)),
+                Aggregates.sort(Sorts.ascending("_id"))
+        )))
                 .thenApply(documents -> documents.stream()
                         .map(Document::toJson)
                         .map(Json::parse)
