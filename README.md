@@ -1,5 +1,10 @@
 # Marvel Heroes
 
+#### Groupe
+- Cédric GARCIA - FIL A3
+- Benjamin RIVARD - FIL A3
+#
+
 L'objectif de cet exerice est de développer une application web permettant de découvrir des Héros de Comics (Marvel et DC Comics).
 
 Les principales fonctionnalités de l'application sont : 
