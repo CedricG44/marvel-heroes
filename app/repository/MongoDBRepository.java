@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.mongodb.client.model.Accumulators;
 import com.mongodb.client.model.Aggregates;
-import com.mongodb.client.model.Filters;
 import com.mongodb.reactivestreams.client.MongoCollection;
 import com.mongodb.reactivestreams.client.MongoDatabase;
 import models.Hero;
@@ -17,12 +16,12 @@ import utils.ReactiveStreamsUtils;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static com.mongodb.client.model.Sorts.*;
+import static com.mongodb.client.model.Sorts.descending;
+import static com.mongodb.client.model.Sorts.orderBy;
 
 @Singleton
 public class MongoDBRepository {
@@ -85,23 +84,13 @@ public class MongoDBRepository {
         Document groupByUniverseDoc = Document.parse(groupByUniverse);
         Document sortDoc = Document.parse(sort);
 
-        List<Document> pipeline = new ArrayList<Document>();
+        List<Document> pipeline = new ArrayList<>();
         pipeline.add(dateFilterDoc);
         pipeline.add(groupByYearDoc);
         pipeline.add(groupByUniverseDoc);
         pipeline.add(sortDoc);
 
-        //Document document = Document.parse("{yearAppearance: \"$identity.yearAppearance\",universe: \"$identity.universe\"}");
-        //Document byUniverseDoc = Document.parse("{ byUniverse : { universe : \"$_id.universe\", count : \"$count\" }}");
-        return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(
-                pipeline
-                /*Arrays.asList(
-
-                Aggregates.match(Filters.ne("identity.yearAppearance", "")),
-                Aggregates.group(document, Accumulators.sum("count",1)),
-                Aggregates.("", Accumulators.push("universe", "_id.universe"), Accumulators.push("count", "count"))
-                Aggregates.sort(orderBy(ascending("_id.yearAppearance"))))*/
-        ))
+        return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(pipeline))
                 .thenApply(documents -> documents.stream()
                         .map(Document::toJson)
                         .map(Json::parse)
@@ -134,7 +123,7 @@ public class MongoDBRepository {
     }
 
     public CompletionStage<List<ItemCount>> byUniverse() {
-        return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(Arrays.asList(
+        return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(Collections.singletonList(
                 Aggregates.group("$identity.universe", Accumulators.sum("count", 1))
         ))).thenApply(documents -> documents.stream()
                 .map(Document::toJson)
