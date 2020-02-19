@@ -76,7 +76,7 @@ public class RedisRepository {
                         .collect(Collectors.toList()))
                 .exceptionally(e -> {
                     handleErrors(e);
-                    return Collections.singletonList(new StatItem("-1", "No result", "", ""));
+                    return Collections.emptyList();
                 });
     }
 
@@ -91,8 +91,7 @@ public class RedisRepository {
                         .collect(Collectors.toList()))
                 .exceptionally(e -> {
                     handleErrors(e);
-                    final StatItem item = new StatItem("-1", "No result", "", "");
-                    return Collections.singletonList(new TopStatItem(item, -1L));
+                    return Collections.emptyList();
                 });
     }
 
