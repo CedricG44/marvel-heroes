@@ -99,6 +99,6 @@ public class ElasticRepository {
 
     private List<SearchedHero> handleErrors(final Throwable e) {
         LOGGER.error("Error while contacting Elasticsearch: " + e.getMessage(), e);
-        return Collections.singletonList(new SearchedHero("-1", "", "No result", "", ""));
+        return Collections.emptyList();
     }
 }
