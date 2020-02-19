@@ -50,23 +50,24 @@ public class MongoDBRepository {
 
     public CompletionStage<List<YearAndUniverseStat>> countByYearAndUniverse() {
         LOGGER.info("Retrieved count by year and universe");
-        Map id = new HashMap<String, String>() {{
-            put("yearAppearance", "$identity.yearAppearance");
-            put("universe", "$identity.universe");
-        }};
-        Map yearAppearance = new HashMap<String, String>() {{
-            put("yearAppearance", "$_id.yearAppearance");
-        }};
-        Map push = new HashMap<String, String>() {{
-            put("universe", "$_id.universe");
-            put("count", "$count");
-        }};
-        return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(Arrays.asList(
-                Aggregates.match(Filters.ne("identity.yearAppearance", "")),
-                Aggregates.group(id, Accumulators.sum("count", 1)),
-                Aggregates.group(yearAppearance, Accumulators.push("byUniverse", push)),
-                Aggregates.sort(Sorts.ascending("_id"))
-        )))
+        final Map<String, String> id = new HashMap<>();
+        id.put("yearAppearance", "$identity.yearAppearance");
+        id.put("universe", "$identity.universe");
+
+        final Map<String, String> yearAppearance = new HashMap<>();
+        yearAppearance.put("yearAppearance", "$_id.yearAppearance");
+
+        final Map<String, String> push = new HashMap<>();
+        push.put("universe", "$_id.universe");
+        push.put("count", "$count");
+
+        return ReactiveStreamsUtils.fromMultiPublisher(heroesCollection.aggregate(
+                Arrays.asList(
+                        Aggregates.match(Filters.ne("identity.yearAppearance", "")),
+                        Aggregates.group(id, Accumulators.sum("count", 1)),
+                        Aggregates.group(yearAppearance, Accumulators.push("byUniverse", push)),
+                        Aggregates.sort(Sorts.ascending("_id"))
+                )))
                 .thenApply(documents -> documents.stream()
                         .map(Document::toJson)
                         .map(Json::parse)
