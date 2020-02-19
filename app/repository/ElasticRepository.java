@@ -14,8 +14,10 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.Collections;
 import java.util.List;
+import java.util.Spliterator;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 @Singleton
@@ -55,7 +57,8 @@ public class ElasticRepository {
                                 "}"))
                 .thenApply(response -> {
                     final JsonNode hits = response.asJson().get("hits");
-                    final List<SearchedHero> heroes = mapHeroesFromJson(response.asJson().get("hits"), "hits");
+                    final List<SearchedHero> heroes = mapHeroesFromJson(response.asJson().get("hits"), "hits")
+                            .collect(Collectors.toList());
                     final int total = hits.get("total").get("value").asInt();
                     return new PaginatedResults<>(total, page, Math.max(1, (int) Math.ceil((double) total / (double) size)), heroes);
                 })
@@ -77,24 +80,21 @@ public class ElasticRepository {
                                 "  }\n" +
                                 "}"))
                 .thenApply(response -> {
-                    final Iterable<JsonNode> iterable = () -> response.asJson().get("suggest").get("suggestion").elements();
-                    return StreamSupport.stream(iterable.spliterator(), false)
-                            .map(n -> mapHeroesFromJson(n, "options"))
-                            .collect(Collectors.toList())
-                            .get(0);
+                    final Spliterator<JsonNode> iterator = response.asJson().get("suggest").get("suggestion").spliterator();
+                    return StreamSupport.stream(iterator, false)
+                            .flatMap(n -> mapHeroesFromJson(n, "options"))
+                            .collect(Collectors.toList());
                 })
                 .exceptionally(this::handleErrors);
     }
 
-    private List<SearchedHero> mapHeroesFromJson(final JsonNode node, final String nodeKey) {
-        final Iterable<JsonNode> iterable = () -> node.get(nodeKey).elements();
-        return StreamSupport.stream(iterable.spliterator(), false)
+    private Stream<SearchedHero> mapHeroesFromJson(final JsonNode node, final String nodeKey) {
+        return StreamSupport.stream(node.get(nodeKey).spliterator(), false)
                 .map(e -> {
                     final JsonNode n = e.get("_source");
                     ((ObjectNode) n).put("id", e.get("_id").textValue());
                     return SearchedHero.fromJson(n);
-                })
-                .collect(Collectors.toList());
+                });
     }
 
     private List<SearchedHero> handleErrors(final Throwable e) {
